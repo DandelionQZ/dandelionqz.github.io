@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>안랩 코테 D-Day</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e4e4e0;
+    --accent: #2f6fde; --accent-soft: #e8effc; --done: #9a9aa0; --warn: #c2410c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --card: #1d1d20; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33;
+      --accent: #6b9cf5; --accent-soft: #1f2a40; --done: #66666c; --warn: #fb923c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 40px 0 4px; }
+  h3 { font-size: 15px; margin: 0; }
+  p { margin: 6px 0; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: 14px; }
+  .top { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .dday { font-size: 15px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 2px 10px; border-radius: 999px; }
+  .bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 14px 0 4px; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 10px 0; }
+  .card.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card.past:not(.today) .head { opacity: .75; }
+  .head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .date { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; margin-left: 6px; font-weight: 400; }
+  .today .tag.now { color: var(--accent); border-color: var(--accent); }
+  .concept { font-size: 14px; color: var(--muted); margin: 6px 0 8px; }
+  ul.probs { list-style: none; padding: 0; margin: 0; }
+  ul.probs li { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  ul.probs input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  ul.probs li.checked a { color: var(--done); text-decoration: line-through; }
+  .topic { font-size: 12px; color: var(--muted); }
+  details { margin: 8px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  ol, .rules { padding-left: 20px; }
+  .rules li { margin: 4px 0; }
+  .warn { color: var(--warn); }
+  button.reset { margin-top: 24px; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>안랩 코딩테스트 준비</h1>
+    <span class="dday" id="dday"></span>
+  </div>
+  <p class="muted">2026.11.10 ~ 12.04 · JavaScript · 평일 2~3문제, 주말 4~6시간</p>
+  <div class="bar"><div id="bar"></div></div>
+  <p class="muted" id="progress"></p>
+
+  <h2>공부 규칙</h2>
+  <ul class="rules">
+    <li><b>한 문제 30분.</b> 30분 동안 방향도 못 잡으면 풀이를 보고, <b>다음 날 안 보고 다시 푼다.</b></li>
+    <li>푼 다음에는 시간복잡도를 한 줄로 적는다. 왜 이 알고리즘인지 말로 설명할 수 있어야 "푼 것".</li>
+    <li>못 푼 문제는 체크하지 말고 주말 복습 때 다시 푼다. 체크는 <b>혼자 힘으로 통과했을 때만.</b></li>
+    <li>주말 첫 1시간은 그 주 오답 다시 풀기. 새 문제는 그다음.</li>
+    <li>JS 템플릿(아래)은 외워서 손으로 칠 수 있게 만든다. 시험장에서 큐·힙을 처음 짜면 시간이 날아간다.</li>
+  </ul>
+
+  <h2>일정</h2>
+  <div id="plan"></div>
+
+  <h2>JS 코테 함정</h2>
+  <ul class="rules">
+    <li><code>arr.sort()</code>는 <b>문자열 기준</b> 정렬. 숫자는 꼭 <code>sort((a, b) =&gt; a - b)</code>.</li>
+    <li><code>arr.shift()</code>는 O(n). BFS 큐는 <b>head 인덱스</b>로 꺼낸다 (아래 템플릿).</li>
+    <li>2차원 배열은 <code>Array.from({ length: n }, () =&gt; Array(m).fill(0))</code>. <code>Array(n).fill([])</code>는 모든 행이 같은 배열을 공유한다.</li>
+    <li>재귀 깊이가 1만 단위면 콜스택이 터질 수 있다. 깊은 DFS는 스택으로 바꾼다.</li>
+    <li>2<sup>53</sup>을 넘는 수는 <code>BigInt</code>. 나머지 연산 문제는 매 단계 <code>% MOD</code>.</li>
+    <li>키가 문자열이 아니거나 순서가 중요하면 객체 대신 <code>Map</code>. 존재 확인은 <code>Set</code>.</li>
+    <li>반복문 안 문자열 <code>+=</code>는 느릴 수 있다. 배열에 push 후 <code>join('')</code>.</li>
+    <li>정수 나눗셈은 <code>Math.floor(a / b)</code> (음수면 <code>Math.trunc</code>와 다름 주의).</li>
+  </ul>
+
+  <h2>외워 둘 JS 템플릿</h2>
+
+  <details><summary>표준입력 읽기 (백준형 플랫폼일 때)</summary>
+<pre><code>const input = require('fs').readFileSync('/dev/stdin', 'utf8').trim().split('\n');
+const n = Number(input[0]);
+const arr = input[1].split(' ').map(Number);</code></pre>
+  </details>
+
+  <details><summary>BFS (격자, head 포인터 큐)</summary>
+<pre><code>function bfs(grid, sr, sc) {
+  const R = grid.length, C = grid[0].length;
+  const dist = Array.from({ length: R }, () =&gt; Array(C).fill(-1));
+  const q = [[sr, sc]];
+  let head = 0;
+  dist[sr][sc] = 0;
+  const dr = [1, -1, 0, 0], dc = [0, 0, 1, -1];
+  while (head &lt; q.length) {
+    const [r, c] = q[head++];
+    for (let d = 0; d &lt; 4; d++) {
+      const nr = r + dr[d], nc = c + dc[d];
+      if (nr &lt; 0 || nc &lt; 0 || nr &gt;= R || nc &gt;= C) continue;
+      if (grid[nr][nc] === 0 || dist[nr][nc] !== -1) continue;
+      dist[nr][nc] = dist[r][c] + 1;
+      q.push([nr, nc]);
+    }
+  }
+  return dist;
+}</code></pre>
+  </details>
+
+  <details><summary>최소 힙 (우선순위 큐)</summary>
+<pre><code>class MinHeap {
+  constructor() { this.h = []; }
+  size() { return this.h.length; }
+  peek() { return this.h[0]; }
+  push(v) {
+    const h = this.h; h.push(v);
+    let i = h.length - 1;
+    while (i &gt; 0) {
+      const p = (i - 1) &gt;&gt; 1;
+      if (h[p] &lt;= h[i]) break;
+      [h[p], h[i]] = [h[i], h[p]]; i = p;
+    }
+  }
+  pop() {
+    const h = this.h, top = h[0], last = h.pop();
+    if (h.length) {
+      h[0] = last;
+      let i = 0;
+      while (true) {
+        const l = i * 2 + 1, r = l + 1;
+        let m = i;
+        if (l &lt; h.length &amp;&amp; h[l] &lt; h[m]) m = l;
+        if (r &lt; h.length &amp;&amp; h[r] &lt; h[m]) m = r;
+        if (m === i) break;
+        [h[m], h[i]] = [h[i], h[m]]; i = m;
+      }
+    }
+    return top;
+  }
+}
+// [거리, 노드] 같은 배열을 넣으려면 비교를 h[a][0] &lt; h[b][0] 으로 바꾼다.</code></pre>
+  </details>
+
+  <details><summary>다익스트라</summary>
+<pre><code>// graph[u] = [[v, w], ...], 힙은 [dist, node] 비교로 바꾼 MinHeap
+function dijkstra(graph, start) {
+  const dist = Array(graph.length).fill(Infinity);
+  const pq = new MinHeap();
+  dist[start] = 0; pq.push([0, start]);
+  while (pq.size()) {
+    const [d, u] = pq.pop();
+    if (d &gt; dist[u]) continue;
+    for (const [v, w] of graph[u]) {
+      if (d + w &lt; dist[v]) { dist[v] = d + w; pq.push([dist[v], v]); }
+    }
+  }
+  return dist;
+}</code></pre>
+  </details>
+
+  <details><summary>순열 · 조합 (백트래킹)</summary>
+<pre><code>function combinations(arr, k) {
+  const res = [], pick = [];
+  (function go(start) {
+    if (pick.length === k) { res.push([...pick]); return; }
+    for (let i = start; i &lt; arr.length; i++) {
+      pick.push(arr[i]); go(i + 1); pick.pop();
+    }
+  })(0);
+  return res;
+}
+
+function permutations(arr, k) {
+  const res = [], pick = [], used = Array(arr.length).fill(false);
+  (function go() {
+    if (pick.length === k) { res.push([...pick]); return; }
+    for (let i = 0; i &lt; arr.length; i++) {
+      if (used[i]) continue;
+      used[i] = true; pick.push(arr[i]); go(); pick.pop(); used[i] = false;
+    }
+  })();
+  return res;
+}</code></pre>
+  </details>
+
+  <details><summary>이분 탐색 (파라메트릭 서치)</summary>
+<pre><code>// ok(x)가 false…false true…true 일 때 처음 true가 되는 x
+let lo = 0, hi = 1e18; // 범위가 2^53을 넘으면 BigInt로
+while (lo &lt; hi) {
+  const mid = Math.floor((lo + hi) / 2);
+  if (ok(mid)) hi = mid; else lo = mid + 1;
+}
+// lo가 답</code></pre>
+  </details>
+
+  <details><summary>유니온 파인드</summary>
+<pre><code>const parent = Array.from({ length: n }, (_, i) =&gt; i);
+const find = (x) =&gt; (parent[x] === x ? x : (parent[x] = find(parent[x])));
+const union = (a, b) =&gt; {
+  a = find(a); b = find(b);
+  if (a === b) return false;
+  parent[b] = a; return true;
+};</code></pre>
+  </details>
+
+  <h2>D-Day 체크리스트</h2>
+  <ul class="rules">
+    <li>시험 플랫폼·허용 언어·IDE 자동완성 여부를 안내 메일에서 다시 확인.</li>
+    <li>문제를 전부 먼저 읽고 쉬운 것부터. 한 문제에 40분 넘게 붙잡지 않기.</li>
+    <li>제출 전에 빈 입력, 최솟값/최댓값, 중복 원소 같은 엣지 케이스를 직접 넣어 보기.</li>
+    <li>부분 점수가 있으면 완전탐색으로라도 일단 제출하고 최적화.</li>
+  </ul>
+
+  <button class="reset" id="reset">체크 전부 지우기</button>
+  <p class="muted">체크 상태는 이 브라우저에만 저장됩니다.</p>
+</main>
+
+<script>
+const P = (id, name, topic) => ({ id, name, topic });
+// 날짜별 계획. 문제 링크는 프로그래머스 lessons/{id}
+const PLAN = [
+  { phase: '1주차 · JS 기본기 + 해시 · 정렬 · 구현' },
+  { date: '2026-11-10', title: 'JS 코테 세팅', concept: '아래 "JS 코테 함정"을 다 읽고, 템플릿을 한 번씩 직접 쳐 본다.',
+    probs: [P(81301, '숫자 문자열과 영단어', '문자열'), P(92334, '신고 결과 받기', '해시·구현')] },
+  { date: '2026-11-11', title: '해시 (Map / Set)', concept: '"있는지 확인" "개수 세기"가 보이면 Map/Set. O(n²)을 O(n)으로 줄이는 연습.',
+    probs: [P(42576, '완주하지 못한 선수', '해시'), P(1845, '폰켓몬', '해시'), P(42578, '의상', '해시·조합')] },
+  { date: '2026-11-12', title: '해시 응용', concept: '슬라이딩 윈도우 + Map으로 개수 유지하기.',
+    probs: [P(42577, '전화번호 목록', '해시·정렬'), P(131127, '할인 행사', '슬라이딩 윈도우'), P(132265, '롤케이크 자르기', '해시')] },
+  { date: '2026-11-13', title: '정렬', concept: '비교 함수 직접 짜기. 여러 기준 정렬(a[0]-b[0] || a[1]-b[1]).',
+    probs: [P(42748, 'K번째수', '정렬'), P(42746, '가장 큰 수', '정렬'), P(42747, 'H-Index', '정렬')] },
+  { date: '2026-11-14', title: '문자열 · 구현', weekend: true, concept: '복습 1시간(이번 주 오답) → 새 문제. 구현 문제는 코드 짜기 전에 단계를 주석으로 먼저 적는다.',
+    probs: [P(72410, '신규 아이디 추천', '문자열'), P(67256, '키패드 누르기', '구현'), P(42888, '오픈채팅방', '해시'), P(92341, '주차 요금 계산', '구현'), P(64065, '튜플', '문자열·정렬')] },
+  { date: '2026-11-15', title: '시뮬레이션', weekend: true, concept: '2차원 배열 인덱스 다루기. 방향 배열(dr, dc) 쓰는 법.',
+    probs: [P(64061, '크레인 인형뽑기 게임', '스택·구현'), P(77485, '행렬 테두리 회전하기', '구현'), P(68645, '삼각 달팽이', '구현'), P(60057, '문자열 압축', '문자열'), P(42889, '실패율', '정렬')] },
+  { date: '2026-11-16', title: '해시 · 정렬 마무리', concept: '1주차 오답 하나 다시 풀고 시작.',
+    probs: [P(42579, '베스트앨범', '해시·정렬'), P(17677, '[1차] 뉴스 클러스터링', '해시'), P(17686, '[3차] 파일명 정렬', '정렬')] },
+
+  { phase: '2주차 · 스택 · 큐 · 힙 · 완전탐색 · 이분탐색' },
+  { date: '2026-11-17', title: '스택', concept: '괄호·짝 맞추기 = 스택. "가장 최근 것"과 비교하면 스택.',
+    probs: [P(12909, '올바른 괄호', '스택'), P(12973, '짝지어 제거하기', '스택'), P(76502, '괄호 회전하기', '스택')] },
+  { date: '2026-11-18', title: '큐', concept: 'shift() 대신 head 포인터. 시간 흐름 시뮬레이션.',
+    probs: [P(42586, '기능개발', '큐'), P(42587, '프로세스', '큐'), P(42583, '다리를 지나는 트럭', '큐')] },
+  { date: '2026-11-19', title: '모노토닉 스택', concept: '"다음 큰 수" "언제까지 유지" 패턴. 스택에 인덱스를 넣는다.',
+    probs: [P(42584, '주식가격', '스택'), P(154539, '뒤에 있는 큰 수 찾기', '스택'), P(131704, '택배상자', '스택')] },
+  { date: '2026-11-20', title: '힙 직접 구현', concept: 'MinHeap 템플릿을 안 보고 짜기. 최대 힙은 값에 -1을 곱해서.',
+    probs: [P(42626, '더 맵게', '힙'), P(42628, '이중우선순위큐', '힙')] },
+  { date: '2026-11-21', title: '힙 응용 + 완전탐색', weekend: true, concept: '복습 1시간 → 새 문제. 완전탐색은 "경우의 수 × 확인 비용"이 1억 아래인지 먼저 계산.',
+    probs: [P(42627, '디스크 컨트롤러', '힙'), P(155651, '호텔 대실', '정렬·힙'), P(86491, '최소직사각형', '완전탐색'), P(42840, '모의고사', '완전탐색'), P(42842, '카펫', '완전탐색'), P(42839, '소수 찾기', '순열')] },
+  { date: '2026-11-22', title: '순열 · 조합 · 백트래킹', weekend: true, concept: '순열/조합 템플릿을 안 보고 짜기. 가지치기 조건 찾기.',
+    probs: [P(87946, '피로도', '순열'), P(84512, '모음사전', 'DFS'), P(72411, '메뉴 리뉴얼', '조합·해시'), P(92342, '양궁대회', '백트래킹'), P(12952, 'N-Queen', '백트래킹')] },
+  { date: '2026-11-23', title: '이분탐색 · 투 포인터', concept: '답을 x로 정했을 때 가능한지 판단 → 이분탐색. 연속 구간 합 → 투 포인터.',
+    probs: [P(43238, '입국심사', '이분탐색'), P(118667, '두 큐 합 같게 만들기', '투 포인터'), P(131701, '연속 부분 수열 합의 개수', '구간 합')] },
+
+  { phase: '3주차 · 그래프 · 그리디 · DP' },
+  { date: '2026-11-24', title: 'DFS', concept: '인접 리스트 만들기. 방문 배열. 연결 요소 세기.',
+    probs: [P(43165, '타겟 넘버', 'DFS'), P(43162, '네트워크', 'DFS'), P(86971, '전력망을 둘로 나누기', '그래프')] },
+  { date: '2026-11-25', title: 'BFS (격자)', concept: '최단 거리 = BFS. BFS 템플릿을 안 보고 짜기.',
+    probs: [P(1844, '게임 맵 최단거리', 'BFS'), P(154540, '무인도 여행', 'BFS'), P(81302, '거리두기 확인하기', 'BFS')] },
+  { date: '2026-11-26', title: 'BFS 응용', concept: '경유지가 있으면 BFS 두 번. 상태가 숫자/단어여도 BFS.',
+    probs: [P(159993, '미로 탈출', 'BFS'), P(43163, '단어 변환', 'BFS'), P(154538, '숫자 변환하기', 'BFS·DP')] },
+  { date: '2026-11-27', title: '최단 경로', concept: '가중치 없음 → BFS, 있음 → 다익스트라. 다익스트라 템플릿 외우기.',
+    probs: [P(49189, '가장 먼 노드', 'BFS'), P(12978, '배달', '다익스트라')] },
+  { date: '2026-11-28', title: '그리디', weekend: true, concept: '복습 1시간 → 새 문제. 정렬 기준을 세우고 "왜 이 선택이 항상 최선인지" 한 줄로 설명.',
+    probs: [P(42862, '체육복', '그리디'), P(42885, '구명보트', '그리디·투 포인터'), P(42883, '큰 수 만들기', '그리디·스택'), P(42884, '단속카메라', '그리디'), P(181188, '요격 시스템', '그리디'), P(42861, '섬 연결하기', '유니온 파인드')] },
+  { date: '2026-11-29', title: 'DP 기초', weekend: true, concept: 'dp[i]의 뜻을 한 문장으로 먼저 적고, 점화식 → 초기값 → 순서.',
+    probs: [P(12945, '피보나치 수', 'DP'), P(12914, '멀리 뛰기', 'DP'), P(12900, '2 x n 타일링', 'DP'), P(43105, '정수 삼각형', 'DP'), P(12913, '땅따먹기', 'DP'), P(42898, '등굣길', 'DP')] },
+  { date: '2026-11-30', title: 'DP · 플로이드', concept: '2차원 DP. 모든 쌍 최단거리 = 플로이드(n ≤ 200 정도).',
+    probs: [P(12905, '가장 큰 정사각형 찾기', 'DP'), P(72413, '합승 택시 요금', '플로이드')] },
+
+  { phase: '실전 · 모의고사와 정리' },
+  { date: '2026-12-01', title: '모의고사 1', concept: '타이머 2시간, 3문제 연속. 풀이 검색 금지. 끝나고 못 푼 것만 풀이 확인.',
+    probs: [P(172927, '광물 캐기', '그리디·구현'), P(176962, '과제 진행하기', '스택·구현'), P(169199, '리코쳇 로봇', 'BFS')] },
+  { date: '2026-12-02', title: '모의고사 2', concept: '타이머 2시간. 어제 실수(시간 배분, 엣지 케이스)를 메모해 두고 같은 실수 안 하기.',
+    probs: [P(250136, '[PCCP 기출] 석유 시추', 'BFS'), P(60058, '괄호 변환', '재귀·구현'), P(152996, '시소 짝꿍', '해시')] },
+  { date: '2026-12-03', title: '정리', concept: '새 문제 없음. 체크 안 된 문제 중 2~3개 다시 풀기, 템플릿 4개(BFS·힙·조합·이분탐색) 안 보고 쳐 보기, 일찍 자기.',
+    probs: [] },
+  { date: '2026-12-04', title: '시험', concept: '아래 D-Day 체크리스트 확인.', probs: [] },
+];
+
+const KEY = 'ahnlab-cote-done';
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
+let done = load();
+
+const pad = (n) => String(n).padStart(2, '0');
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+
+function render() {
+  const root = document.getElementById('plan');
+  root.innerHTML = '';
+  for (const d of PLAN) {
+    if (d.phase) {
+      const h = document.createElement('h3');
+      h.textContent = d.phase;
+      h.style.margin = '24px 0 4px';
+      root.append(h);
+      continue;
+    }
+    const dt = new Date(d.date + 'T00:00:00');
+    const card = document.createElement('section');
+    card.className = 'card' + (d.date === todayStr ? ' today' : '') + (d.date < todayStr ? ' past' : '');
+    const tags = (d.weekend ? '<span class="tag">주말</span>' : '') + (d.date === todayStr ? '<span class="tag now">오늘</span>' : '');
+    card.innerHTML = `<div class="head"><span class="date">${dt.getMonth() + 1}/${dt.getDate()} (${WD[dt.getDay()]})${tags}</span><b>${d.title}</b></div><p class="concept">${d.concept}</p>`;
+    if (d.probs.length) {
+      const ul = document.createElement('ul');
+      ul.className = 'probs';
+      for (const p of d.probs) {
+        const li = document.createElement('li');
+        const id = 'p' + p.id;
+        li.className = done[p.id] ? 'checked' : '';
+        li.innerHTML = `<input type="checkbox" id="${id}" ${done[p.id] ? 'checked' : ''} aria-label="${p.name} 완료">` +
+          `<a href="https://school.programmers.co.kr/learn/courses/30/lessons/${p.id}" target="_blank" rel="noopener">${p.name}</a>` +
+          `<span class="topic">${p.topic}</span>`;
+        li.querySelector('input').addEventListener('change', (e) => {
+          if (e.target.checked) done[p.id] = todayStr; else delete done[p.id];
+          li.className = e.target.checked ? 'checked' : '';
+          save(done); updateProgress();
+        });
+        ul.append(li);
+      }
+      card.append(ul);
+    }
+    root.append(card);
+  }
+}
+
+function updateProgress() {
+  const all = PLAN.flatMap((d) => d.probs || []);
+  const n = all.filter((p) => done[p.id]).length;
+  document.getElementById('bar').style.width = (n / all.length * 100) + '%';
+  document.getElementById('progress').textContent = `${n} / ${all.length} 문제 완료`;
+}
+
+const days = Math.round((new Date('2026-12-04T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86400000);
+document.getElementById('dday').textContent = days > 0 ? `D-${days}` : days === 0 ? 'D-Day' : '시험 끝';
+
+document.getElementById('reset').addEventListener('click', () => {
+  if (!confirm('체크한 기록을 전부 지울까요?')) return;
+  done = {}; save(done); render(); updateProgress();
+});
+
+render();
+updateProgress();
+document.querySelector('.card.today')?.scrollIntoView({ block: 'center' });
+</script>
+</body>
+</html>
